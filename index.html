@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Serviços — Nexus Data Engenharia</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+  .topbar{background:#1F3864;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+  .topbar-title{color:#fff;font-size:16px;font-weight:500}
+  .topbar-sub{color:#BDD7EE;font-size:12px;margin-top:2px}
+  .topbar-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 14px;font-size:13px;color:#fff;cursor:pointer;transition:background .15s}
+  .topbar-btn:hover{background:rgba(255,255,255,.25)}
+  .content{max-width:700px;margin:0 auto;padding:16px}
+  .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+  @media(min-width:480px){.metrics{grid-template-columns:repeat(4,1fr)}}
+  .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px}
+  .metric-label{font-size:12px;color:#888;margin-bottom:4px}
+  .metric-value{font-size:20px;font-weight:500;color:#1a1a1a}
+  .metric-value.green{color:#27500A}
+  .metric-value.amber{color:#633806}
+  .metric-value.red{color:#791F1F}
+  .filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .filter-btn{background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:#666;transition:all .15s}
+  .filter-btn.active{background:#E6F1FB;border-color:#378ADD;color:#0C447C}
+  .cards{display:flex;flex-direction:column;gap:10px}
+  .card{background:#fff;border:0.5px solid #e5e5e0;border-radius:12px;padding:14px 16px;transition:border-color .15s}
+  .card:hover{border-color:#ccc}
+  .card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .card-title{font-size:14px;font-weight:500;color:#1a1a1a;line-height:1.4}
+  .card-client{font-size:12px;color:#888;margin-top:2px}
+  .card-badges{display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+  .badge{font-size:10px;padding:3px 7px;border-radius:6px;font-weight:500}
+  .badge-pending{background:#FAEEDA;color:#633806}
+  .badge-progress{background:#E6F1FB;color:#0C447C}
+  .badge-done{background:#EAF3DE;color:#27500A}
+  .badge-p1{background:#FCEBEB;color:#791F1F}
+  .badge-p2{background:#FAEEDA;color:#633806}
+  .badge-p3{background:#EAF3DE;color:#27500A}
+  .card-body{font-size:12px;color:#666;margin-bottom:10px;line-height:1.5}
+  .card-footer{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .meta{font-size:11px;color:#aaa}
+  .meta span{color:#555;font-weight:500}
+  .meta span.warn{color:#791F1F;font-weight:600}
+  .tag-sem-custo{background:#f2f2f2;color:#aaa;font-size:10px;padding:2px 7px;border-radius:6px}
+  .hours-bar{flex:1;min-width:100px}
+  .hours-label{display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:3px}
+  .bar-track{height:4px;background:#eee;border-radius:2px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:2px;background:#378ADD;transition:width .3s}
+  .bar-fill.over{background:#E24B4A}
+  .card-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid #f0f0f0}
+  .action-btn{font-size:11px;padding:4px 10px;border-radius:7px;border:0.5px solid #e0e0e0;background:transparent;cursor:pointer;color:#666;transition:all .15s}
+  .action-btn:hover{background:#f5f5f5;color:#1a1a1a}
+  .action-btn.danger{color:#E24B4A}
+  .empty{text-align:center;padding:2.5rem 1rem;color:#aaa;font-size:14px}
+  .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:20px}
+  .overlay.open{display:flex;align-items:flex-start;justify-content:center}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:460px;padding:20px;margin:auto}
+  .modal h3{font-size:16px;font-weight:500;margin-bottom:16px;color:#1a1a1a}
+  .form-group{margin-bottom:12px}
+  .form-group label{display:block;font-size:12px;color:#666;margin-bottom:4px}
+  .form-group input,.form-group select,.form-group textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 11px;font-size:13px;background:#fff;color:#1a1a1a;outline:none}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#378ADD}
+  .form-group textarea{resize:vertical;min-height:70px;font-family:inherit}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .btn{background:transparent;border:1px solid #ddd;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:#1a1a1a;transition:background .15s}
+  .btn:hover{background:#f5f5f5}
+  .btn-primary{background:#1F3864;border-color:#1F3864;color:#fff}
+  .btn-primary:hover{background:#162a4e}
+  .fab{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:#1F3864;border:none;color:#fff;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;z-index:50}
+  @media(min-width:600px){.fab{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Gestão de serviços</div>
+    <div class="topbar-sub">Nexus Data Engenharia</div>
+  </div>
+  <button class="topbar-btn" onclick="openModal()">+ Novo</button>
+</div>
+
+<div class="content">
+  <div class="metrics" id="metrics"></div>
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
+    <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
+    <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
+  </div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">Novo serviço</h3>
+    <div class="form-group">
+      <label>Nome do serviço</label>
+      <input type="text" id="f-nome" placeholder="Ex: ETL para DDA">
+    </div>
+    <div class="form-group">
+      <label>Cliente / Empresa</label>
+      <input type="text" id="f-cliente" placeholder="Ex: Adaptive">
+    </div>
+    <div class="form-group">
+      <label>Descrição</label>
+      <textarea id="f-descricao" placeholder="Descreva o serviço..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Deadline (opcional)</label>
+        <input type="date" id="f-deadline">
+      </div>
+      <div class="form-group">
+        <label>Valor (R$) — 0 = sem custo</label>
+        <input type="number" id="f-valor" placeholder="0" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Horas estimadas</label>
+        <input type="number" id="f-hest" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Horas gastas</label>
+        <input type="number" id="f-hgas" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="pendente">Pendente</option>
+          <option value="em andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Prioridade</label>
+        <select id="f-prioridade">
+          <option value="alta">Alta</option>
+          <option value="media">Média</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'nexus_servicos';
+
+const defaults = [
+  {id:1,nome:'ETL para Processamento de DDA',cliente:'Adaptive',descricao:'Desenvolvimento de ETL para importação de arquivo CNAB com dados do DDA em lote.',deadline:'2026-04-15',valor:1800,hEst:18,hGas:0,status:'pendente',prioridade:'alta'},
+  {id:2,nome:'Trigger de Tributação IMendes',cliente:'—',descricao:'Trigger PostgreSQL para consulta automática de dados tributários via API IMendes ao inserir itens.',deadline:'',valor:0,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
+  {id:3,nome:'Relatório de Rentabilidade',cliente:'Adaptive',descricao:'Layout Stimulsoft para relatório de rentabilidade com dados de combustíveis e produtos.',deadline:'',valor:0,hEst:0,hGas:0,status:'concluido',prioridade:'baixa'},
+  {id:4,nome:'Alteração ETL de Despesas — parcelas',cliente:'Adaptive',descricao:'Adicionar número de parcelas ao processo de importação da ETL de despesas.',deadline:'',valor:400,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
+  {id:5,nome:'Job de aviso de estoque baixo',cliente:'Adaptive',descricao:'Criação de job para monitoramento e notificação automática de itens com estoque abaixo do mínimo.',deadline:'',valor:200,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
+];
+
+function load(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    return s ? JSON.parse(s) : defaults;
+  }catch(e){ return defaults; }
+}
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(servicos));
+}
+
+let servicos = load();
+let nextId = Math.max(...servicos.map(s=>s.id), 0) + 1;
+let filtro = 'todos';
+let editId = null;
+
+function diasRestantes(d){
+  if(!d) return null;
+  return Math.ceil((new Date(d) - new Date()) / (1000*60*60*24));
+}
+
+function fmtData(d){
+  if(!d) return null;
+  const [y,m,dia] = d.split('-');
+  return `${dia}/${m}/${y}`;
+}
+
+function fmtValor(v){
+  return 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function statusBadge(s){
+  const map={pendente:'badge-pending',['em andamento']:'badge-progress',concluido:'badge-done'};
+  const label={pendente:'Pendente',['em andamento']:'Em andamento',concluido:'Concluído'};
+  return `<span class="badge ${map[s]}">${label[s]}</span>`;
+}
+
+function prioBadge(p){
+  const map={alta:'badge-p1',media:'badge-p2',baixa:'badge-p3'};
+  const label={alta:'Alta',media:'Média',baixa:'Baixa'};
+  return `<span class="badge ${map[p]}">${label[p]}</span>`;
+}
+
+function renderMetrics(){
+  const total = servicos.length;
+  const andamento = servicos.filter(s=>s.status==='em andamento').length;
+  const pendente = servicos.filter(s=>s.status==='pendente').length;
+  const receita = servicos.filter(s=>s.status!=='concluido').reduce((a,s)=>a+Number(s.valor),0);
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Total de serviços</div><div class="metric-value">${total}</div></div>
+    <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
+    <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value red">${pendente}</div></div>
+    <div class="metric"><div class="metric-label">A receber</div><div class="metric-value green">${fmtValor(receita)}</div></div>
+  `;
+}
+
+function renderCards(){
+  const lista = filtro==='todos' ? servicos : servicos.filter(s=>s.status===filtro);
+  const el = document.getElementById('cards');
+  if(!lista.length){el.innerHTML='<div class="empty">Nenhum serviço encontrado.</div>';return;}
+
+  el.innerHTML = lista.sort((a,b)=>{
+    const po={alta:0,media:1,baixa:2};
+    const ad = a.deadline ? new Date(a.deadline) : new Date('9999-12-31');
+    const bd = b.deadline ? new Date(b.deadline) : new Date('9999-12-31');
+    return po[a.prioridade]-po[b.prioridade] || ad-bd;
+  }).map(s=>{
+    const dias = diasRestantes(s.deadline);
+    const warnClass = dias !== null && dias <= 3 && s.status !== 'concluido' ? 'warn' : '';
+    let deadlineLabel = '';
+    if(s.deadline){
+      if(s.status==='concluido') deadlineLabel = `Entregue em ${fmtData(s.deadline)}`;
+      else if(dias < 0) deadlineLabel = `Atrasado ${Math.abs(dias)}d`;
+      else if(dias === 0) deadlineLabel = 'Vence hoje';
+      else deadlineLabel = `${dias}d restantes`;
+    }
+    const deadlineMeta = s.deadline
+      ? `<div class="meta">Deadline <span class="${warnClass}">${fmtData(s.deadline)} · ${deadlineLabel}</span></div>`
+      : `<div class="meta">Deadline <span>—</span></div>`;
+
+    const valorMeta = s.valor > 0
+      ? `<div class="meta">Valor <span>${fmtValor(s.valor)}</span></div>`
+      : `<div class="meta"><span class="tag-sem-custo">sem custo</span></div>`;
+
+    const horasBar = s.hEst > 0 ? `
+      <div class="hours-bar">
+        <div class="hours-label"><span>Horas</span><span>${s.hGas}h / ${s.hEst}h</span></div>
+        <div class="bar-track"><div class="bar-fill ${s.hGas>s.hEst?'over':''}" style="width:${Math.min(Math.round(s.hGas/s.hEst*100),100)}%"></div></div>
+      </div>` : '';
+
+    return `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${s.nome}</div>
+          <div class="card-client">${s.cliente}</div>
+        </div>
+        <div class="card-badges">${prioBadge(s.prioridade)} ${statusBadge(s.status)}</div>
+      </div>
+      <div class="card-body">${s.descricao}</div>
+      <div class="card-footer">
+        ${deadlineMeta}
+        ${valorMeta}
+        ${horasBar}
+      </div>
+      <div class="card-actions">
+        <button class="action-btn" onclick="editarServico(${s.id})">Editar</button>
+        <button class="action-btn" onclick="mudarStatus(${s.id})">Avançar status</button>
+        <button class="action-btn danger" onclick="deletar(${s.id})">Remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render(){renderMetrics();renderCards();}
+
+function setFilter(f,btn){
+  filtro=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function openModal(id=null){
+  editId=id;
+  document.getElementById('modal-title').textContent = id ? 'Editar serviço' : 'Novo serviço';
+  if(id){
+    const s=servicos.find(x=>x.id===id);
+    document.getElementById('f-nome').value=s.nome;
+    document.getElementById('f-cliente').value=s.cliente==='—'?'':s.cliente;
+    document.getElementById('f-descricao').value=s.descricao;
+    document.getElementById('f-deadline').value=s.deadline||'';
+    document.getElementById('f-valor').value=s.valor;
+    document.getElementById('f-hest').value=s.hEst;
+    document.getElementById('f-hgas').value=s.hGas;
+    document.getElementById('f-status').value=s.status;
+    document.getElementById('f-prioridade').value=s.prioridade;
+  } else {
+    ['f-nome','f-cliente','f-descricao','f-deadline','f-valor','f-hest','f-hgas'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-status').value='pendente';
+    document.getElementById('f-prioridade').value='media';
+  }
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  editId=null;
+}
+
+document.getElementById('overlay').addEventListener('click', function(e){
+  if(e.target === this) closeModal();
+});
+
+function salvar(){
+  const nome=document.getElementById('f-nome').value.trim();
+  if(!nome){alert('Informe o nome do serviço.');return;}
+  const cliente=document.getElementById('f-cliente').value.trim();
+  const obj={
+    nome,
+    cliente:cliente||'—',
+    descricao:document.getElementById('f-descricao').value.trim(),
+    deadline:document.getElementById('f-deadline').value||'',
+    valor:Number(document.getElementById('f-valor').value)||0,
+    hEst:Number(document.getElementById('f-hest').value)||0,
+    hGas:Number(document.getElementById('f-hgas').value)||0,
+    status:document.getElementById('f-status').value,
+    prioridade:document.getElementById('f-prioridade').value,
+  };
+  if(editId){
+    const i=servicos.findIndex(s=>s.id===editId);
+    servicos[i]={...servicos[i],...obj};
+  } else {
+    servicos.push({id:nextId++,...obj});
+  }
+  save();
+  closeModal();
+  render();
+}
+
+function editarServico(id){openModal(id);}
+
+function mudarStatus(id){
+  const s=servicos.find(x=>x.id===id);
+  const ordem=['pendente','em andamento','concluido'];
+  const i=ordem.indexOf(s.status);
+  if(i<ordem.length-1){s.status=ordem[i+1];save();render();}
+}
+
+function deletar(id){
+  if(confirm('Remover este serviço?')){
+    servicos=servicos.filter(s=>s.id!==id);
+    save();
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
