@@ -19,7 +19,7 @@
   .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
   @media(min-width:480px){.metrics{grid-template-columns:repeat(3,1fr)}}
   @media(min-width:700px){.metrics{grid-template-columns:repeat(4,1fr)}}
-  @media(min-width:900px){.metrics{grid-template-columns:repeat(7,1fr)}}
+  @media(min-width:1000px){.metrics{grid-template-columns:repeat(8,1fr)}}
   .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px}
   .metric-label{font-size:12px;color:#888;margin-bottom:4px}
   .metric-value{font-size:20px;font-weight:500;color:#1a1a1a}
@@ -40,7 +40,9 @@
   .badge-pending{background:#FAEEDA;color:#633806}
   .badge-progress{background:#E6F1FB;color:#0C447C}
   .badge-done{background:#EAF3DE;color:#27500A}
+  .badge-nao-orcado{background:#F1EFE8;color:#5F5E5A}
   .badge-orcamento{background:#EEEDFE;color:#3C3489}
+  .badge-faturado{background:#EAF3DE;color:#085041}
   .badge-p1{background:#FCEBEB;color:#791F1F}
   .badge-p2{background:#FAEEDA;color:#633806}
   .badge-p3{background:#EAF3DE;color:#27500A}
@@ -97,10 +99,12 @@
   <div class="metrics" id="metrics"></div>
   <div class="filters">
     <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('nao orcado',this)">Não orçado</button>
     <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
     <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
     <button class="filter-btn" onclick="setFilter('orcamento enviado',this)">Orçamento enviado</button>
     <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
+    <button class="filter-btn" onclick="setFilter('faturado',this)">Faturado</button>
   </div>
   <div class="cards" id="cards"></div>
 </div>
@@ -146,10 +150,12 @@
       <div class="form-group">
         <label>Status</label>
         <select id="f-status">
-          <option value="pendente">Pendente</option>
+          <option value="nao orcado">Não orçado</option>
           <option value="orcamento enviado">Orçamento enviado</option>
+          <option value="pendente">Pendente</option>
           <option value="em andamento">Em andamento</option>
           <option value="concluido">Concluído</option>
+          <option value="faturado">Faturado</option>
         </select>
       </div>
       <div class="form-group">
@@ -205,8 +211,8 @@ function fmtData(d){ if(!d) return null; const [y,m,dia]=d.split('-'); return `$
 function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function statusBadge(s){
-  const map={pendente:'badge-pending',['em andamento']:'badge-progress',concluido:'badge-done',['orcamento enviado']:'badge-orcamento'};
-  const label={pendente:'Pendente',['em andamento']:'Em andamento',concluido:'Concluído',['orcamento enviado']:'Orçamento enviado'};
+  const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',concluido:'badge-done',faturado:'badge-faturado'};
+  const label={['nao orcado']:'Não orçado',pendente:'Pendente',['orcamento enviado']:'Orçamento enviado',['em andamento']:'Em andamento',concluido:'Concluído',faturado:'Faturado'};
   return `<span class="badge ${map[s]}">${label[s]}</span>`;
 }
 
@@ -220,18 +226,21 @@ function renderMetrics(){
   const total     = servicos.length;
   const andamento = servicos.filter(s=>s.status==='em andamento').length;
   const pendente  = servicos.filter(s=>s.status==='pendente').length;
+  const naoOrcado     = servicos.filter(s=>s.status==='nao orcado').length;
   const orcEnviado    = servicos.filter(s=>s.status==='orcamento enviado').length;
   const valorOrcEnviado = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
+  const valorFaturado = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
   const recebido      = servicos.reduce((a,s)=>a+Number(s.valorRecebido||0),0);
   const aReceber      = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total de serviços</div><div class="metric-value">${total}</div></div>
-    <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value red">${pendente}</div></div>
+    <div class="metric"><div class="metric-label">Não orçados</div><div class="metric-value" style="color:#5F5E5A">${naoOrcado}</div></div>
     <div class="metric"><div class="metric-label">Orçamento enviado</div><div class="metric-value" style="color:#3C3489">${orcEnviado}</div></div>
-    <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
     <div class="metric"><div class="metric-label">Em negociação</div><div class="metric-value" style="color:#3C3489"><span class="${vClass()}">${fmtValor(valorOrcEnviado)}</span></div></div>
-    <div class="metric"><div class="metric-label">Recebido</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(recebido)}</span></div></div>
+    <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
     <div class="metric"><div class="metric-label">A receber</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(aReceber)}</span></div></div>
+    <div class="metric"><div class="metric-label">Faturado</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(valorFaturado)}</span></div></div>
+    <div class="metric"><div class="metric-label">Recebido</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(recebido)}</span></div></div>
   `;
 }
 
@@ -347,7 +356,7 @@ function editarServico(id){ openModal(id); }
 
 function mudarStatus(id){
   const s=servicos.find(x=>x.id===id);
-  const ordem=['pendente','orcamento enviado','em andamento','concluido'];
+  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','concluido','faturado'];
   const i=ordem.indexOf(s.status);
   if(i<ordem.length-1){
     const statusAnterior = s.status;
@@ -359,6 +368,10 @@ function mudarStatus(id){
     }
     // Ao concluir (em andamento → concluído): registra os 50% restantes
     if(statusAnterior==='em andamento' && s.status==='concluido'){
+      s.valorRecebido = Number(s.valor||0);
+    }
+    // Ao faturar: garante 100% recebido
+    if(statusAnterior==='concluido' && s.status==='faturado'){
       s.valorRecebido = Number(s.valor||0);
     }
     save(); render();
