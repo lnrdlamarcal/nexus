@@ -39,6 +39,7 @@
   .badge-pending{background:#FAEEDA;color:#633806}
   .badge-progress{background:#E6F1FB;color:#0C447C}
   .badge-done{background:#EAF3DE;color:#27500A}
+  .badge-orcamento{background:#EEEDFE;color:#3C3489}
   .badge-p1{background:#FCEBEB;color:#791F1F}
   .badge-p2{background:#FAEEDA;color:#633806}
   .badge-p3{background:#EAF3DE;color:#27500A}
@@ -97,6 +98,7 @@
     <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
     <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
     <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
+    <button class="filter-btn" onclick="setFilter('orcamento enviado',this)">Orçamento enviado</button>
     <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
   </div>
   <div class="cards" id="cards"></div>
@@ -144,6 +146,7 @@
         <label>Status</label>
         <select id="f-status">
           <option value="pendente">Pendente</option>
+          <option value="orcamento enviado">Orçamento enviado</option>
           <option value="em andamento">Em andamento</option>
           <option value="concluido">Concluído</option>
         </select>
@@ -201,8 +204,8 @@ function fmtData(d){ if(!d) return null; const [y,m,dia]=d.split('-'); return `$
 function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function statusBadge(s){
-  const map={pendente:'badge-pending',['em andamento']:'badge-progress',concluido:'badge-done'};
-  const label={pendente:'Pendente',['em andamento']:'Em andamento',concluido:'Concluído'};
+  const map={pendente:'badge-pending',['em andamento']:'badge-progress',concluido:'badge-done',['orcamento enviado']:'badge-orcamento'};
+  const label={pendente:'Pendente',['em andamento']:'Em andamento',concluido:'Concluído',['orcamento enviado']:'Orçamento enviado'};
   return `<span class="badge ${map[s]}">${label[s]}</span>`;
 }
 
@@ -339,7 +342,7 @@ function editarServico(id){ openModal(id); }
 
 function mudarStatus(id){
   const s=servicos.find(x=>x.id===id);
-  const ordem=['pendente','em andamento','concluido'];
+  const ordem=['pendente','orcamento enviado','em andamento','concluido'];
   const i=ordem.indexOf(s.status);
   if(i<ordem.length-1){
     const statusAnterior = s.status;
