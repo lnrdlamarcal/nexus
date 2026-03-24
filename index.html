@@ -223,7 +223,7 @@ function renderMetrics(){
   const orcEnviado    = servicos.filter(s=>s.status==='orcamento enviado').length;
   const valorOrcEnviado = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
   const recebido      = servicos.reduce((a,s)=>a+Number(s.valorRecebido||0),0);
-  const aReceber      = servicos.filter(s=>s.status==='em andamento').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
+  const aReceber      = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total de serviços</div><div class="metric-value">${total}</div></div>
     <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value red">${pendente}</div></div>
