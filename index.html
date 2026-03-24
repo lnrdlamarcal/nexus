@@ -284,10 +284,10 @@ function renderCards(){
 
     const adiantadoTag = (()=>{
       if(s.valor<=0) return '';
-      if(s.adiantamentoPago) return `<span class="tag-50pago">50% recebido</span>`;
       const statusComIndicador = ['em andamento','aguardando assinatura','concluido','faturado'];
-      if(statusComIndicador.includes(s.status)) return `<span class="tag-50pendente">50% pendente</span>`;
-      return '';
+      if(!statusComIndicador.includes(s.status)) return '';
+      if(s.adiantamentoPago) return `<span class="tag-50pago">50% recebido</span>`;
+      return `<span class="tag-50pendente">100% pendente</span>`;
     })();
 
     const horasBar = s.hEst>0?`
