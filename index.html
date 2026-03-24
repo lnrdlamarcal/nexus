@@ -43,6 +43,7 @@
   .badge-done{background:#EAF3DE;color:#27500A}
   .badge-nao-orcado{background:#F1EFE8;color:#5F5E5A}
   .badge-orcamento{background:#EEEDFE;color:#3C3489}
+  .badge-aguardando{background:#FAECE7;color:#993C1D}
   .badge-faturado{background:#EAF3DE;color:#085041}
   .badge-p1{background:#FCEBEB;color:#791F1F}
   .badge-p2{background:#FAEEDA;color:#633806}
@@ -53,6 +54,8 @@
   .meta span{color:#555;font-weight:500}
   .meta span.warn{color:#791F1F;font-weight:600}
   .tag-sem-custo{background:#f2f2f2;color:#aaa;font-size:10px;padding:2px 7px;border-radius:6px}
+  .tag-50pago{background:#EAF3DE;color:#27500A;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500}
+  .tag-50pendente{background:#FAEEDA;color:#633806;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:500}
   .hours-bar{flex:1;min-width:100px}
   .hours-label{display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:3px}
   .bar-track{height:4px;background:#eee;border-radius:2px;overflow:hidden}
@@ -104,6 +107,7 @@
     <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
     <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
     <button class="filter-btn" onclick="setFilter('orcamento enviado',this)">Orçamento enviado</button>
+    <button class="filter-btn" onclick="setFilter('aguardando assinatura',this)">Ag. assinatura</button>
     <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
     <button class="filter-btn" onclick="setFilter('faturado',this)">Faturado</button>
   </div>
@@ -155,6 +159,7 @@
           <option value="orcamento enviado">Orçamento enviado</option>
           <option value="pendente">Pendente</option>
           <option value="em andamento">Em andamento</option>
+          <option value="aguardando assinatura">Aguardando assinatura</option>
           <option value="concluido">Concluído</option>
           <option value="faturado">Faturado</option>
         </select>
@@ -212,8 +217,8 @@ function fmtData(d){ if(!d) return null; const [y,m,dia]=d.split('-'); return `$
 function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function statusBadge(s){
-  const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',concluido:'badge-done',faturado:'badge-faturado'};
-  const label={['nao orcado']:'Não orçado',pendente:'Pendente',['orcamento enviado']:'Orçamento enviado',['em andamento']:'Em andamento',concluido:'Concluído',faturado:'Faturado'};
+  const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',['aguardando assinatura']:'badge-aguardando',concluido:'badge-done',faturado:'badge-faturado'};
+  const label={['nao orcado']:'Não orçado',pendente:'Pendente',['orcamento enviado']:'Orçamento enviado',['em andamento']:'Em andamento',['aguardando assinatura']:'Ag. assinatura',concluido:'Concluído',faturado:'Faturado'};
   return `<span class="badge ${map[s]}">${label[s]}</span>`;
 }
 
@@ -271,6 +276,14 @@ function renderCards(){
       ? `<div class="meta">Valor <span class="${vClass()}">${fmtValor(s.valor)}</span></div>`
       : `<div class="meta"><span class="tag-sem-custo">sem custo</span></div>`;
 
+    const adiantadoTag = (()=>{
+      if(s.valor<=0) return '';
+      const pago = (s.valorRecebido||0) >= s.valor*0.5;
+      return pago
+        ? `<span class="tag-50pago">50% recebido</span>`
+        : `<span class="tag-50pendente">50% pendente</span>`;
+    })();
+
     const horasBar = s.hEst>0?`
       <div class="hours-bar">
         <div class="hours-label"><span>Horas</span><span>${s.hGas}h / ${s.hEst}h</span></div>
@@ -287,7 +300,7 @@ function renderCards(){
         <div class="card-badges">${prioBadge(s.prioridade)} ${statusBadge(s.status)}</div>
       </div>
       <div class="card-body">${s.descricao}</div>
-      <div class="card-footer">${deadlineMeta}${valorMeta}${horasBar}</div>
+      <div class="card-footer">${deadlineMeta}${valorMeta}${adiantadoTag}${horasBar}</div>
       <div class="card-actions">
         <button class="action-btn" onclick="editarServico(${s.id})">Editar</button>
         <button class="action-btn" onclick="mudarStatus(${s.id})">Avançar status</button>
@@ -355,7 +368,7 @@ function editarServico(id){ openModal(id); }
 
 function mudarStatus(id){
   const s=servicos.find(x=>x.id===id);
-  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','concluido','faturado'];
+  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
   const i=ordem.indexOf(s.status);
   if(i<ordem.length-1){
     const statusAnterior = s.status;
