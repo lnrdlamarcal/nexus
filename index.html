@@ -18,7 +18,7 @@
   .content{max-width:700px;margin:0 auto;padding:16px}
   .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
   @media(min-width:480px){.metrics{grid-template-columns:repeat(3,1fr)}}
-  @media(min-width:700px){.metrics{grid-template-columns:repeat(5,1fr)}}
+  @media(min-width:700px){.metrics{grid-template-columns:repeat(6,1fr)}}
   .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px}
   .metric-label{font-size:12px;color:#888;margin-bottom:4px}
   .metric-value{font-size:20px;font-weight:500;color:#1a1a1a}
@@ -219,12 +219,14 @@ function renderMetrics(){
   const total     = servicos.length;
   const andamento = servicos.filter(s=>s.status==='em andamento').length;
   const pendente  = servicos.filter(s=>s.status==='pendente').length;
+  const orcEnviado= servicos.filter(s=>s.status==='orcamento enviado').length;
   const recebido  = servicos.reduce((a,s)=>a+Number(s.valorRecebido||0),0);
   const aReceber  = servicos.filter(s=>s.status!=='concluido').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total de serviços</div><div class="metric-value">${total}</div></div>
-    <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
     <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value red">${pendente}</div></div>
+    <div class="metric"><div class="metric-label">Orçamento enviado</div><div class="metric-value" style="color:#3C3489">${orcEnviado}</div></div>
+    <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
     <div class="metric"><div class="metric-label">Recebido</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(recebido)}</span></div></div>
     <div class="metric"><div class="metric-label">A receber</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(aReceber)}</span></div></div>
   `;
