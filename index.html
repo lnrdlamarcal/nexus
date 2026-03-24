@@ -138,7 +138,7 @@
       </div>
       <div class="form-group">
         <label>Valor (R$) — 0 = sem custo</label>
-        <input type="number" id="f-valor" placeholder="0" min="0" step="0.01">
+        <input type="number" id="f-valor" placeholder="0" min="0" step="0.01" oninput="document.getElementById('fg-adiantamento').style.display=this.value>0?'block':'none'">
       </div>
     </div>
     <div class="form-row">
@@ -172,6 +172,12 @@
           <option value="baixa">Baixa</option>
         </select>
       </div>
+    </div>
+    <div class="form-group" id="fg-adiantamento" style="display:none">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f-adiantamento" style="width:auto;accent-color:#1F3864">
+        <span>50% de adiantamento recebido</span>
+      </label>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -278,10 +284,10 @@ function renderCards(){
 
     const adiantadoTag = (()=>{
       if(s.valor<=0) return '';
-      const pago = (s.valorRecebido||0) >= s.valor*0.5;
-      return pago
-        ? `<span class="tag-50pago">50% recebido</span>`
-        : `<span class="tag-50pendente">50% pendente</span>`;
+      if(s.adiantamentoPago) return `<span class="tag-50pago">50% recebido</span>`;
+      const statusComIndicador = ['em andamento','aguardando assinatura','concluido','faturado'];
+      if(statusComIndicador.includes(s.status)) return `<span class="tag-50pendente">50% pendente</span>`;
+      return '';
     })();
 
     const horasBar = s.hEst>0?`
@@ -333,11 +339,17 @@ function openModal(id=null){
     document.getElementById('f-hgas').value=s.hGas;
     document.getElementById('f-status').value=s.status;
     document.getElementById('f-prioridade').value=s.prioridade;
+    document.getElementById('f-adiantamento').checked=!!(s.adiantamentoPago);
+    document.getElementById('fg-adiantamento').style.display=s.valor>0?'block':'none';
   } else {
     ['f-nome','f-cliente','f-descricao','f-deadline','f-valor','f-hest','f-hgas'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('f-status').value='pendente';
+    document.getElementById('f-status').value='nao orcado';
     document.getElementById('f-prioridade').value='media';
+    document.getElementById('f-adiantamento').checked=false;
+    document.getElementById('fg-adiantamento').style.display='none';
   }
+  const val = id ? servicos.find(x=>x.id===id).valor : 0;
+  document.getElementById('fg-adiantamento').style.display = val>0 ? 'block' : 'none';
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -358,6 +370,7 @@ function salvar(){
     hGas:Number(document.getElementById('f-hgas').value)||0,
     status:document.getElementById('f-status').value,
     prioridade:document.getElementById('f-prioridade').value,
+    adiantamentoPago:document.getElementById('f-adiantamento').checked,
   };
   if(editId){ const i=servicos.findIndex(s=>s.id===editId); servicos[i]={...servicos[i],...obj}; }
   else { servicos.push({id:nextId++,valorRecebido:0,...obj}); }
@@ -376,7 +389,7 @@ function mudarStatus(id){
     // Ao iniciar (pendente → em andamento): pergunta se recebeu os 50%
     if(statusAnterior==='pendente' && s.status==='em andamento' && s.valor>0){
       const adiantado = confirm(`O adiantamento de 50% (${fmtValor(Number(s.valor)*0.5)}) referente ao serviço "${s.nome}" foi recebido?`);
-      if(adiantado) s.valorRecebido = (s.valorRecebido||0) + Number(s.valor) * 0.5;
+      if(adiantado) s.adiantamentoPago = true;
     }
     // Ao concluir (em andamento → concluído): registra os 50% restantes
     if(statusAnterior==='em andamento' && s.status==='concluido'){
