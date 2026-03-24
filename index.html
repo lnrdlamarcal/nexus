@@ -19,7 +19,7 @@
   .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
   @media(min-width:480px){.metrics{grid-template-columns:repeat(3,1fr)}}
   @media(min-width:700px){.metrics{grid-template-columns:repeat(4,1fr)}}
-  @media(min-width:1000px){.metrics{grid-template-columns:repeat(8,1fr)}}
+  @media(min-width:1000px){.metrics{grid-template-columns:repeat(7,1fr)}}
   .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px;display:flex;flex-direction:column;justify-content:space-between}
   .metric-divider{border-left:2px solid #EEEDFE}
   .metric-label{font-size:11px;color:#888;line-height:1.3}
@@ -231,7 +231,6 @@ function renderMetrics(){
   const orcEnviado    = servicos.filter(s=>s.status==='orcamento enviado').length;
   const valorOrcEnviado = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
   const valorFaturado = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const recebido      = servicos.reduce((a,s)=>a+Number(s.valorRecebido||0),0);
   const aReceber      = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${total}</div></div>
@@ -241,7 +240,6 @@ function renderMetrics(){
     <div class="metric metric-divider"><div class="metric-label">Em negociação</div><div class="metric-value" style="color:#3C3489"><span class="${vClass()}">${fmtValor(valorOrcEnviado)}</span></div></div>
     <div class="metric"><div class="metric-label">A receber</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(aReceber)}</span></div></div>
     <div class="metric"><div class="metric-label">Faturado</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(valorFaturado)}</span></div></div>
-    <div class="metric"><div class="metric-label">Recebido</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(recebido)}</span></div></div>
   `;
 }
 
@@ -369,10 +367,6 @@ function mudarStatus(id){
     }
     // Ao concluir (em andamento → concluído): registra os 50% restantes
     if(statusAnterior==='em andamento' && s.status==='concluido'){
-      s.valorRecebido = Number(s.valor||0);
-    }
-    // Ao faturar: garante 100% recebido
-    if(statusAnterior==='concluido' && s.status==='faturado'){
       s.valorRecebido = Number(s.valor||0);
     }
     save(); render();
