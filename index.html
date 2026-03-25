@@ -16,10 +16,11 @@
   .topbar-btn-icon{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 10px;font-size:14px;color:#fff;cursor:pointer;transition:background .15s;line-height:1}
   .topbar-btn-icon:hover{background:rgba(255,255,255,.25)}
   .content{max-width:700px;margin:0 auto;padding:16px}
-  .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
-  @media(min-width:480px){.metrics{grid-template-columns:repeat(3,1fr)}}
-  @media(min-width:700px){.metrics{grid-template-columns:repeat(4,1fr)}}
-  @media(min-width:1000px){.metrics{grid-template-columns:repeat(9,1fr)}}
+  .metrics{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:16px}
+  .metric{width:calc(50% - 10px)}
+  @media(min-width:480px){.metric{width:calc(33.33% - 10px)}}
+  @media(min-width:700px){.metric{width:calc(25% - 10px)}}
+  @media(min-width:1000px){.metric{width:140px}}
   .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px;display:flex;flex-direction:column;justify-content:space-between}
   .metric-divider{border-left:2px solid #EEEDFE}
   .metric-label{font-size:11px;color:#888;line-height:1.3}
