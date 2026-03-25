@@ -84,14 +84,21 @@
   .fab{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:#1F3864;border:none;color:#fff;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;z-index:50}
   @media(min-width:600px){.fab{display:none}}
   .valor-oculto{filter:blur(6px);user-select:none;pointer-events:none;transition:filter .2s}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;display:inline-block;margin-left:6px;vertical-align:middle}
+  .sync-dot.offline{background:#E24B4A}
+  .sync-dot.loading{background:#FFA726;animation:pulse .8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div>
-    <div class="topbar-title">Gestão de serviços</div>
-    <div class="topbar-sub">Nexus Data Engenharia</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div>
+      <div class="topbar-title">Gestão de serviços</div>
+      <div class="topbar-sub">Nexus Data Engenharia</div>
+    </div>
+    <span class="sync-dot loading" id="sync-dot" title="Conectando..."></span>
   </div>
   <div class="topbar-actions">
     <button class="topbar-btn-icon" id="btn-ocultar" onclick="toggleValores()" title="Ocultar valores">&#128065;</button>
@@ -111,7 +118,7 @@
     <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
     <button class="filter-btn" onclick="setFilter('faturado',this)">Faturado</button>
   </div>
-  <div class="cards" id="cards"></div>
+  <div class="cards" id="cards"><div class="empty">Carregando...</div></div>
 </div>
 
 <button class="fab" onclick="openModal()">+</button>
@@ -186,38 +193,73 @@
   </div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
 <script>
-const STORAGE_KEY = 'nexus_servicos';
+// ── Firebase config ───────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCvi_PyfgghkBpkoE0vMKMgrF7V8bt7dBA",
+  authDomain: "nexus-755f9.firebaseapp.com",
+  projectId: "nexus-755f9",
+  storageBucket: "nexus-755f9.firebasestorage.app",
+  messagingSenderId: "131267406165",
+  appId: "1:131267406165:web:df1a1d4e52dfeecb9ea7dc"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const col = db.collection('servicos');
 
-const defaults = [
-  {id:1,nome:'ETL para Processamento de DDA',valorRecebido:0,cliente:'Adaptive',descricao:'Desenvolvimento de ETL para importação de arquivo CNAB com dados do DDA em lote.',deadline:'2026-04-15',valor:1800,hEst:18,hGas:0,status:'pendente',prioridade:'alta'},
-  {id:2,nome:'Trigger de Tributação IMendes',valorRecebido:0,cliente:'—',descricao:'Trigger PostgreSQL para consulta automática de dados tributários via API IMendes ao inserir itens.',deadline:'',valor:0,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
-  {id:3,nome:'Relatório de Rentabilidade',valorRecebido:0,cliente:'Adaptive',descricao:'Layout Stimulsoft para relatório de rentabilidade com dados de combustíveis e produtos.',deadline:'',valor:0,hEst:0,hGas:0,status:'concluido',prioridade:'baixa'},
-  {id:4,nome:'Alteração ETL de Despesas — parcelas',valorRecebido:0,cliente:'Adaptive',descricao:'Adicionar número de parcelas ao processo de importação da ETL de despesas.',deadline:'',valor:400,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
-  {id:5,nome:'Job de aviso de estoque baixo',valorRecebido:0,cliente:'Adaptive',descricao:'Criação de job para monitoramento e notificação automática de itens com estoque abaixo do mínimo.',deadline:'',valor:200,hEst:0,hGas:0,status:'pendente',prioridade:'media'},
-];
+// ── Estado ────────────────────────────────────────────────────────────────────
+let servicos  = [];
+let filtro    = 'todos';
+let editId    = null;
+let ocultarVal = false;
 
-function load(){
-  try{ const s=localStorage.getItem(STORAGE_KEY); return s?JSON.parse(s):defaults; }
-  catch(e){ return defaults; }
+// ── Sync dot ──────────────────────────────────────────────────────────────────
+function setSyncDot(state){
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot' + (state==='ok' ? '' : state==='loading' ? ' loading' : ' offline');
+  dot.title = state==='ok' ? 'Sincronizado' : state==='loading' ? 'Sincronizando...' : 'Sem conexão';
 }
 
-function save(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(servicos)); }
+// ── Listener em tempo real ────────────────────────────────────────────────────
+col.orderBy('criadoEm','asc').onSnapshot(snap => {
+  servicos = snap.docs.map(d => ({...d.data(), firestoreId: d.id}));
+  setSyncDot('ok');
+  render();
+}, err => {
+  console.error(err);
+  setSyncDot('offline');
+});
 
-let servicos    = load();
-let nextId      = Math.max(...servicos.map(s=>s.id),0)+1;
-let filtro      = 'todos';
-let editId      = null;
-let ocultarVal  = false;
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+async function salvarFirestore(obj, firestoreId=null){
+  setSyncDot('loading');
+  try{
+    if(firestoreId){
+      await col.doc(firestoreId).update(obj);
+    } else {
+      obj.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+      await col.add(obj);
+    }
+  } catch(e){ setSyncDot('offline'); alert('Erro ao salvar: '+e.message); }
+}
 
+async function deletarFirestore(firestoreId){
+  setSyncDot('loading');
+  try{ await col.doc(firestoreId).delete(); }
+  catch(e){ setSyncDot('offline'); alert('Erro ao remover: '+e.message); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function toggleValores(){
   ocultarVal = !ocultarVal;
   document.getElementById('btn-ocultar').innerHTML = ocultarVal ? '&#128683;' : '&#128065;';
   render();
 }
-
 function vClass(){ return ocultarVal ? 'valor-oculto' : ''; }
-
 function diasRestantes(d){ if(!d) return null; return Math.ceil((new Date(d)-new Date())/(1000*60*60*24)); }
 function fmtData(d){ if(!d) return null; const [y,m,dia]=d.split('-'); return `${dia}/${m}/${y}`; }
 function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -225,24 +267,24 @@ function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFrac
 function statusBadge(s){
   const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',['aguardando assinatura']:'badge-aguardando',concluido:'badge-done',faturado:'badge-faturado'};
   const label={['nao orcado']:'Não orçado',pendente:'Pendente',['orcamento enviado']:'Orçamento enviado',['em andamento']:'Em andamento',['aguardando assinatura']:'Ag. assinatura',concluido:'Concluído',faturado:'Faturado'};
-  return `<span class="badge ${map[s]}">${label[s]}</span>`;
+  return `<span class="badge ${map[s]||''}">${label[s]||s}</span>`;
 }
-
 function prioBadge(p){
   const map={alta:'badge-p1',media:'badge-p2',baixa:'badge-p3'};
   const label={alta:'Alta',media:'Média',baixa:'Baixa'};
   return `<span class="badge ${map[p]}">${label[p]}</span>`;
 }
 
+// ── Métricas ──────────────────────────────────────────────────────────────────
 function renderMetrics(){
-  const total     = servicos.length;
-  const andamento = servicos.filter(s=>s.status==='em andamento').length;
-  const pendente  = servicos.filter(s=>s.status==='pendente').length;
-  const naoOrcado     = servicos.filter(s=>s.status==='nao orcado').length;
-  const orcEnviado    = servicos.filter(s=>s.status==='orcamento enviado').length;
+  const total           = servicos.length;
+  const andamento       = servicos.filter(s=>s.status==='em andamento').length;
+  const pendente        = servicos.filter(s=>s.status==='pendente').length;
+  const naoOrcado       = servicos.filter(s=>s.status==='nao orcado').length;
+  const orcEnviado      = servicos.filter(s=>s.status==='orcamento enviado').length;
   const valorOrcEnviado = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const valorFaturado = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const aReceber      = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+(Number(s.valor||0)-Number(s.valorRecebido||0)),0);
+  const valorFaturado   = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
+  const aReceber        = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+Number(s.valor||0),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${total}</div></div>
     <div class="metric"><div class="metric-label">Não orçados</div><div class="metric-value" style="color:#5F5E5A">${naoOrcado}</div></div>
@@ -254,11 +296,11 @@ function renderMetrics(){
   `;
 }
 
+// ── Cards ─────────────────────────────────────────────────────────────────────
 function renderCards(){
   const lista = filtro==='todos'?servicos:servicos.filter(s=>s.status===filtro);
   const el = document.getElementById('cards');
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum serviço encontrado.</div>';return;}
-
   el.innerHTML = lista.sort((a,b)=>{
     const po={alta:0,media:1,baixa:2};
     const ad=a.deadline?new Date(a.deadline):new Date('9999-12-31');
@@ -277,11 +319,9 @@ function renderCards(){
     const deadlineMeta = s.deadline
       ? `<div class="meta">Deadline <span class="${warnClass}">${fmtData(s.deadline)} · ${deadlineLabel}</span></div>`
       : `<div class="meta">Deadline <span>—</span></div>`;
-
     const valorMeta = s.valor>0
       ? `<div class="meta">Valor <span class="${vClass()}">${fmtValor(s.valor)}</span></div>`
       : `<div class="meta"><span class="tag-sem-custo">sem custo</span></div>`;
-
     const adiantadoTag = (()=>{
       if(s.valor<=0) return '';
       const statusComIndicador = ['em andamento','aguardando assinatura','concluido','faturado'];
@@ -289,13 +329,11 @@ function renderCards(){
       if(s.adiantamentoPago) return `<span class="tag-50pago">50% recebido</span>`;
       return `<span class="tag-50pendente">100% pendente</span>`;
     })();
-
     const horasBar = s.hEst>0?`
       <div class="hours-bar">
         <div class="hours-label"><span>Horas</span><span>${s.hGas}h / ${s.hEst}h</span></div>
         <div class="bar-track"><div class="bar-fill ${s.hGas>s.hEst?'over':''}" style="width:${Math.min(Math.round(s.hGas/s.hEst*100),100)}%"></div></div>
       </div>`:'';
-
     return `
     <div class="card">
       <div class="card-header">
@@ -308,9 +346,9 @@ function renderCards(){
       <div class="card-body">${s.descricao}</div>
       <div class="card-footer">${deadlineMeta}${valorMeta}${adiantadoTag}${horasBar}</div>
       <div class="card-actions">
-        <button class="action-btn" onclick="editarServico(${s.id})">Editar</button>
-        <button class="action-btn" onclick="mudarStatus(${s.id})">Avançar status</button>
-        <button class="action-btn danger" onclick="deletar(${s.id})">Remover</button>
+        <button class="action-btn" onclick="editarServico('${s.firestoreId}')">Editar</button>
+        <button class="action-btn" onclick="mudarStatus('${s.firestoreId}')">Avançar status</button>
+        <button class="action-btn danger" onclick="deletar('${s.firestoreId}')">Remover</button>
       </div>
     </div>`;
   }).join('');
@@ -325,11 +363,12 @@ function setFilter(f,btn){
   renderCards();
 }
 
-function openModal(id=null){
-  editId=id;
-  document.getElementById('modal-title').textContent=id?'Editar serviço':'Novo serviço';
-  if(id){
-    const s=servicos.find(x=>x.id===id);
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(firestoreId=null){
+  editId=firestoreId;
+  document.getElementById('modal-title').textContent=firestoreId?'Editar serviço':'Novo serviço';
+  if(firestoreId){
+    const s=servicos.find(x=>x.firestoreId===firestoreId);
     document.getElementById('f-nome').value=s.nome;
     document.getElementById('f-cliente').value=s.cliente==='—'?'':s.cliente;
     document.getElementById('f-descricao').value=s.descricao;
@@ -348,16 +387,13 @@ function openModal(id=null){
     document.getElementById('f-adiantamento').checked=false;
     document.getElementById('fg-adiantamento').style.display='none';
   }
-  const val = id ? servicos.find(x=>x.id===id).valor : 0;
-  document.getElementById('fg-adiantamento').style.display = val>0 ? 'block' : 'none';
   document.getElementById('overlay').classList.add('open');
 }
 
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); editId=null; }
-
 document.getElementById('overlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
-function salvar(){
+async function salvar(){
   const nome=document.getElementById('f-nome').value.trim();
   if(!nome){alert('Informe o nome do serviço.');return;}
   const obj={
@@ -372,38 +408,31 @@ function salvar(){
     prioridade:document.getElementById('f-prioridade').value,
     adiantamentoPago:document.getElementById('f-adiantamento').checked,
   };
-  if(editId){ const i=servicos.findIndex(s=>s.id===editId); servicos[i]={...servicos[i],...obj}; }
-  else { servicos.push({id:nextId++,valorRecebido:0,...obj}); }
-  save(); closeModal(); render();
+  closeModal();
+  await salvarFirestore(obj, editId);
 }
 
-function editarServico(id){ openModal(id); }
+function editarServico(firestoreId){ openModal(firestoreId); }
 
-function mudarStatus(id){
-  const s=servicos.find(x=>x.id===id);
+async function mudarStatus(firestoreId){
+  const s=servicos.find(x=>x.firestoreId===firestoreId);
   const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
   const i=ordem.indexOf(s.status);
   if(i<ordem.length-1){
     const statusAnterior = s.status;
-    s.status = ordem[i+1];
-    // Ao iniciar (pendente → em andamento): pergunta se recebeu os 50%
-    if(statusAnterior==='pendente' && s.status==='em andamento' && s.valor>0){
+    const novoStatus = ordem[i+1];
+    const update = {status: novoStatus};
+    if(statusAnterior==='pendente' && novoStatus==='em andamento' && s.valor>0){
       const adiantado = confirm(`O adiantamento de 50% (${fmtValor(Number(s.valor)*0.5)}) referente ao serviço "${s.nome}" foi recebido?`);
-      if(adiantado) s.adiantamentoPago = true;
+      if(adiantado) update.adiantamentoPago = true;
     }
-    // Ao concluir (em andamento → concluído): registra os 50% restantes
-    if(statusAnterior==='em andamento' && s.status==='concluido'){
-      s.valorRecebido = Number(s.valor||0);
-    }
-    save(); render();
+    await salvarFirestore(update, firestoreId);
   }
 }
 
-function deletar(id){
-  if(confirm('Remover este serviço?')){ servicos=servicos.filter(s=>s.id!==id); save(); render(); }
+async function deletar(firestoreId){
+  if(confirm('Remover este serviço?')) await deletarFirestore(firestoreId);
 }
-
-render();
 </script>
 </body>
 </html>
