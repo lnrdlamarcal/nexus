@@ -19,7 +19,7 @@
   .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
   @media(min-width:480px){.metrics{grid-template-columns:repeat(3,1fr)}}
   @media(min-width:700px){.metrics{grid-template-columns:repeat(4,1fr)}}
-  @media(min-width:1000px){.metrics{grid-template-columns:repeat(7,1fr)}}
+  @media(min-width:1000px){.metrics{grid-template-columns:repeat(9,1fr)}}
   .metric{background:#fff;border-radius:10px;border:0.5px solid #e5e5e0;padding:12px;display:flex;flex-direction:column;justify-content:space-between}
   .metric-divider{border-left:2px solid #EEEDFE}
   .metric-label{font-size:11px;color:#888;line-height:1.3}
@@ -277,19 +277,23 @@ function prioBadge(p){
 
 // ── Métricas ──────────────────────────────────────────────────────────────────
 function renderMetrics(){
-  const total           = servicos.length;
-  const andamento       = servicos.filter(s=>s.status==='em andamento').length;
-  const pendente        = servicos.filter(s=>s.status==='pendente').length;
-  const naoOrcado       = servicos.filter(s=>s.status==='nao orcado').length;
-  const orcEnviado      = servicos.filter(s=>s.status==='orcamento enviado').length;
-  const valorOrcEnviado = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const valorFaturado   = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const aReceber        = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+Number(s.valor||0),0);
+  const total             = servicos.length;
+  const andamento         = servicos.filter(s=>s.status==='em andamento').length;
+  const pendente          = servicos.filter(s=>s.status==='pendente').length;
+  const naoOrcado         = servicos.filter(s=>s.status==='nao orcado').length;
+  const orcEnviado        = servicos.filter(s=>s.status==='orcamento enviado').length;
+  const aguardando        = servicos.filter(s=>s.status==='aguardando assinatura').length;
+  const concluido         = servicos.filter(s=>s.status==='concluido').length;
+  const valorOrcEnviado   = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
+  const valorFaturado     = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
+  const aReceber          = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+Number(s.valor||0),0);
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${total}</div></div>
     <div class="metric"><div class="metric-label">Não orçados</div><div class="metric-value" style="color:#5F5E5A">${naoOrcado}</div></div>
     <div class="metric"><div class="metric-label">Orç. enviado</div><div class="metric-value" style="color:#3C3489">${orcEnviado}</div></div>
     <div class="metric"><div class="metric-label">Em andamento</div><div class="metric-value amber">${andamento}</div></div>
+    <div class="metric"><div class="metric-label">Ag. assinatura</div><div class="metric-value" style="color:#993C1D">${aguardando}</div></div>
+    <div class="metric"><div class="metric-label">Concluídos</div><div class="metric-value" style="color:#085041">${concluido}</div></div>
     <div class="metric metric-divider"><div class="metric-label">Em negociação</div><div class="metric-value" style="color:#3C3489"><span class="${vClass()}">${fmtValor(valorOrcEnviado)}</span></div></div>
     <div class="metric"><div class="metric-label">A receber</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(aReceber)}</span></div></div>
     <div class="metric"><div class="metric-label">Faturado</div><div class="metric-value green"><span class="${vClass()}">${fmtValor(valorFaturado)}</span></div></div>
