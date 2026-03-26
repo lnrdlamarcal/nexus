@@ -294,7 +294,7 @@ function renderMetrics(){
     .reduce((a,s)=>a+Number(s.valor||0),0);
 
   const aReceber = servicos
-    .filter(s=>s.status==='pendente'||s.status==='em andamento')
+    .filter(s=>s.status==='pendente'||s.status==='em andamento'||s.status==='aguardando assinatura')
     .reduce((a,s)=>a+Number(s.valor||0),0);
 
   // Faturado = 100% dos serviços com status "faturado"
@@ -324,7 +324,7 @@ function renderCards(){
   const el = document.getElementById('cards');
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum serviço encontrado.</div>';return;}
 
-  el.innerHTML = [...lista].sort((a,b)=>{  // spread para não mutar o array original
+  el.innerHTML = [...lista].sort((a,b)=>{
     const po={alta:0,media:1,baixa:2};
     const ad=a.deadline?new Date(a.deadline):new Date('9999-12-31');
     const bd=b.deadline?new Date(b.deadline):new Date('9999-12-31');
@@ -476,7 +476,6 @@ async function voltarStatus(firestoreId){
     if(i>0){
       const novoStatus = ordem[i-1];
       const update = {status: novoStatus};
-      // Volta para antes de "em andamento" → limpa adiantamento
       if(i<=3) update.adiantamentoPago = false;
       await salvarFirestore(update, firestoreId);
     }
