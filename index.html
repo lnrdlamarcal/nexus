@@ -67,7 +67,8 @@
   .action-btn:hover{background:#f5f5f5;color:#1a1a1a}
   .action-btn.danger{color:#E24B4A}
   .action-btn.back{color:#888}
-  .action-btn.back:disabled{opacity:.3;cursor:default}
+  .action-btn:disabled{opacity:.3;cursor:default}
+  .action-btn:disabled:hover{background:transparent;color:#666}
   .empty{text-align:center;padding:2.5rem 1rem;color:#aaa;font-size:14px}
   .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:20px}
   .overlay.open{display:flex;align-items:flex-start;justify-content:center}
@@ -215,10 +216,11 @@ const db = firebase.firestore();
 const col = db.collection('servicos');
 
 // ── Estado ────────────────────────────────────────────────────────────────────
-let servicos  = [];
-let filtro    = 'todos';
-let editId    = null;
-let ocultarVal = false;
+let servicos    = [];
+let filtro      = 'todos';
+let editId      = null;
+let ocultarVal  = false;
+let processando = false;
 
 // ── Sync dot ──────────────────────────────────────────────────────────────────
 function setSyncDot(state){
@@ -280,16 +282,29 @@ function prioBadge(p){
 
 // ── Métricas ──────────────────────────────────────────────────────────────────
 function renderMetrics(){
-  const total             = servicos.length;
-  const andamento         = servicos.filter(s=>s.status==='em andamento').length;
-  const pendente          = servicos.filter(s=>s.status==='pendente').length;
-  const naoOrcado         = servicos.filter(s=>s.status==='nao orcado').length;
-  const orcEnviado        = servicos.filter(s=>s.status==='orcamento enviado').length;
-  const aguardando        = servicos.filter(s=>s.status==='aguardando assinatura').length;
-  const concluido         = servicos.filter(s=>s.status==='concluido').length;
-  const valorOrcEnviado   = servicos.filter(s=>s.status==='orcamento enviado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const valorFaturado     = servicos.filter(s=>s.status==='faturado').reduce((a,s)=>a+Number(s.valor||0),0);
-  const aReceber          = servicos.filter(s=>s.status==='pendente'||s.status==='em andamento').reduce((a,s)=>a+Number(s.valor||0),0);
+  const total      = servicos.length;
+  const andamento  = servicos.filter(s=>s.status==='em andamento').length;
+  const naoOrcado  = servicos.filter(s=>s.status==='nao orcado').length;
+  const orcEnviado = servicos.filter(s=>s.status==='orcamento enviado').length;
+  const aguardando = servicos.filter(s=>s.status==='aguardando assinatura').length;
+  const concluido  = servicos.filter(s=>s.status==='concluido').length;
+
+  const valorOrcEnviado = servicos
+    .filter(s=>s.status==='orcamento enviado')
+    .reduce((a,s)=>a+Number(s.valor||0),0);
+
+  const aReceber = servicos
+    .filter(s=>s.status==='pendente'||s.status==='em andamento')
+    .reduce((a,s)=>a+Number(s.valor||0),0);
+
+  // Faturado = 100% dos serviços com status "faturado"
+  //          + 50% dos serviços com adiantamento pago (em qualquer outro status)
+  const valorFaturado = servicos.reduce((a,s)=>{
+    if(s.status==='faturado') return a + Number(s.valor||0);
+    if(s.adiantamentoPago)    return a + Number(s.valor||0) * 0.5;
+    return a;
+  }, 0);
+
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${total}</div></div>
     <div class="metric"><div class="metric-label">Não orçados</div><div class="metric-value" style="color:#5F5E5A">${naoOrcado}</div></div>
@@ -305,10 +320,11 @@ function renderMetrics(){
 
 // ── Cards ─────────────────────────────────────────────────────────────────────
 function renderCards(){
-  const lista = filtro==='todos'?servicos:servicos.filter(s=>s.status===filtro);
+  const lista = filtro==='todos' ? servicos : servicos.filter(s=>s.status===filtro);
   const el = document.getElementById('cards');
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum serviço encontrado.</div>';return;}
-  el.innerHTML = lista.sort((a,b)=>{
+
+  el.innerHTML = [...lista].sort((a,b)=>{  // spread para não mutar o array original
     const po={alta:0,media:1,baixa:2};
     const ad=a.deadline?new Date(a.deadline):new Date('9999-12-31');
     const bd=b.deadline?new Date(b.deadline):new Date('9999-12-31');
@@ -430,33 +446,41 @@ function editarServico(firestoreId){ openModal(firestoreId); }
 
 // ── Avançar status ────────────────────────────────────────────────────────────
 async function mudarStatus(firestoreId){
-  const s=servicos.find(x=>x.firestoreId===firestoreId);
-  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
-  const i=ordem.indexOf(s.status);
-  if(i<ordem.length-1){
-    const statusAnterior = s.status;
-    const novoStatus = ordem[i+1];
-    const update = {status: novoStatus};
-    if(statusAnterior==='pendente' && novoStatus==='em andamento' && s.valor>0){
-      const adiantado = confirm(`O adiantamento de 50% (${fmtValor(Number(s.valor)*0.5)}) referente ao serviço "${s.nome}" foi recebido?`);
-      if(adiantado) update.adiantamentoPago = true;
+  if(processando) return;
+  processando = true;
+  try{
+    const s=servicos.find(x=>x.firestoreId===firestoreId);
+    const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
+    const i=ordem.indexOf(s.status);
+    if(i<ordem.length-1){
+      const statusAnterior = s.status;
+      const novoStatus = ordem[i+1];
+      const update = {status: novoStatus};
+      if(statusAnterior==='pendente' && novoStatus==='em andamento' && s.valor>0){
+        const adiantado = confirm(`O adiantamento de 50% (${fmtValor(Number(s.valor)*0.5)}) referente ao serviço "${s.nome}" foi recebido?`);
+        if(adiantado) update.adiantamentoPago = true;
+      }
+      await salvarFirestore(update, firestoreId);
     }
-    await salvarFirestore(update, firestoreId);
-  }
+  } finally { processando = false; }
 }
 
 // ── Voltar status ─────────────────────────────────────────────────────────────
 async function voltarStatus(firestoreId){
-  const s=servicos.find(x=>x.firestoreId===firestoreId);
-  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
-  const i=ordem.indexOf(s.status);
-  if(i>0){
-    const novoStatus = ordem[i-1];
-    const update = {status: novoStatus};
-    // Se voltou para antes de "em andamento", limpa o flag de adiantamento
-    if(i<=3) update.adiantamentoPago = false;
-    await salvarFirestore(update, firestoreId);
-  }
+  if(processando) return;
+  processando = true;
+  try{
+    const s=servicos.find(x=>x.firestoreId===firestoreId);
+    const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
+    const i=ordem.indexOf(s.status);
+    if(i>0){
+      const novoStatus = ordem[i-1];
+      const update = {status: novoStatus};
+      // Volta para antes de "em andamento" → limpa adiantamento
+      if(i<=3) update.adiantamentoPago = false;
+      await salvarFirestore(update, firestoreId);
+    }
+  } finally { processando = false; }
 }
 
 async function deletar(firestoreId){
