@@ -62,10 +62,12 @@
   .bar-track{height:4px;background:#eee;border-radius:2px;overflow:hidden}
   .bar-fill{height:100%;border-radius:2px;background:#378ADD;transition:width .3s}
   .bar-fill.over{background:#E24B4A}
-  .card-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid #f0f0f0}
+  .card-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid #f0f0f0;flex-wrap:wrap}
   .action-btn{font-size:11px;padding:4px 10px;border-radius:7px;border:0.5px solid #e0e0e0;background:transparent;cursor:pointer;color:#666;transition:all .15s}
   .action-btn:hover{background:#f5f5f5;color:#1a1a1a}
   .action-btn.danger{color:#E24B4A}
+  .action-btn.back{color:#888}
+  .action-btn.back:disabled{opacity:.3;cursor:default}
   .empty{text-align:center;padding:2.5rem 1rem;color:#aaa;font-size:14px}
   .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:20px}
   .overlay.open{display:flex;align-items:flex-start;justify-content:center}
@@ -339,6 +341,12 @@ function renderCards(){
         <div class="hours-label"><span>Horas</span><span>${s.hGas}h / ${s.hEst}h</span></div>
         <div class="bar-track"><div class="bar-fill ${s.hGas>s.hEst?'over':''}" style="width:${Math.min(Math.round(s.hGas/s.hEst*100),100)}%"></div></div>
       </div>`:'';
+
+    const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
+    const idx = ordem.indexOf(s.status);
+    const podeVoltar  = idx > 0;
+    const podeAvancar = idx < ordem.length - 1;
+
     return `
     <div class="card">
       <div class="card-header">
@@ -352,7 +360,8 @@ function renderCards(){
       <div class="card-footer">${deadlineMeta}${valorMeta}${adiantadoTag}${horasBar}</div>
       <div class="card-actions">
         <button class="action-btn" onclick="editarServico('${s.firestoreId}')">Editar</button>
-        <button class="action-btn" onclick="mudarStatus('${s.firestoreId}')">Avançar status</button>
+        <button class="action-btn back" onclick="voltarStatus('${s.firestoreId}')" ${podeVoltar?'':'disabled'}>← Voltar status</button>
+        <button class="action-btn" onclick="mudarStatus('${s.firestoreId}')" ${podeAvancar?'':'disabled'}>Avançar status →</button>
         <button class="action-btn danger" onclick="deletar('${s.firestoreId}')">Remover</button>
       </div>
     </div>`;
@@ -419,6 +428,7 @@ async function salvar(){
 
 function editarServico(firestoreId){ openModal(firestoreId); }
 
+// ── Avançar status ────────────────────────────────────────────────────────────
 async function mudarStatus(firestoreId){
   const s=servicos.find(x=>x.firestoreId===firestoreId);
   const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
@@ -431,6 +441,20 @@ async function mudarStatus(firestoreId){
       const adiantado = confirm(`O adiantamento de 50% (${fmtValor(Number(s.valor)*0.5)}) referente ao serviço "${s.nome}" foi recebido?`);
       if(adiantado) update.adiantamentoPago = true;
     }
+    await salvarFirestore(update, firestoreId);
+  }
+}
+
+// ── Voltar status ─────────────────────────────────────────────────────────────
+async function voltarStatus(firestoreId){
+  const s=servicos.find(x=>x.firestoreId===firestoreId);
+  const ordem=['nao orcado','orcamento enviado','pendente','em andamento','aguardando assinatura','concluido','faturado'];
+  const i=ordem.indexOf(s.status);
+  if(i>0){
+    const novoStatus = ordem[i-1];
+    const update = {status: novoStatus};
+    // Se voltou para antes de "em andamento", limpa o flag de adiantamento
+    if(i<=3) update.adiantamentoPago = false;
     await salvarFirestore(update, firestoreId);
   }
 }
