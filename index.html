@@ -293,12 +293,18 @@ function renderMetrics(){
     .filter(s=>s.status==='orcamento enviado')
     .reduce((a,s)=>a+Number(s.valor||0),0);
 
+  // A Receber = pendente + em andamento + aguardando assinatura + concluido
+  // Se 50% já foi adiantado (está no Faturado), conta apenas os 50% restantes
+  const STATUS_A_RECEBER = ['pendente','em andamento','aguardando assinatura','concluido'];
   const aReceber = servicos
-    .filter(s=>s.status==='pendente'||s.status==='em andamento'||s.status==='aguardando assinatura')
-    .reduce((a,s)=>a+Number(s.valor||0),0);
+    .filter(s=>STATUS_A_RECEBER.includes(s.status))
+    .reduce((a,s)=>{
+      const valor = Number(s.valor||0);
+      return a + (s.adiantamentoPago ? valor * 0.5 : valor);
+    }, 0);
 
-  // Faturado = 100% dos serviços com status "faturado"
-  //          + 50% dos serviços com adiantamento pago (em qualquer outro status)
+  // Faturado = 100% dos status "faturado"
+  //          + 50% dos que têm adiantamento pago em outros status
   const valorFaturado = servicos.reduce((a,s)=>{
     if(s.status==='faturado') return a + Number(s.valor||0);
     if(s.adiantamentoPago)    return a + Number(s.valor||0) * 0.5;
