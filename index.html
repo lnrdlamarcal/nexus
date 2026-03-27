@@ -16,6 +16,13 @@
   .topbar-btn-icon{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 10px;font-size:14px;color:#fff;cursor:pointer;transition:background .15s;line-height:1}
   .topbar-btn-icon:hover{background:rgba(255,255,255,.25)}
   .content{max-width:700px;margin:0 auto;padding:16px}
+
+  /* ── Abas ── */
+  .tabs{display:flex;gap:4px;margin-bottom:16px;background:#fff;border:0.5px solid #e5e5e0;border-radius:10px;padding:4px}
+  .tab-btn{flex:1;padding:7px;font-size:13px;border:none;background:transparent;border-radius:7px;cursor:pointer;color:#666;transition:all .15s;font-family:inherit}
+  .tab-btn.active{background:#1F3864;color:#fff;font-weight:500}
+  .tab-btn:hover:not(.active){background:#f0f0f0}
+
   .metrics{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:16px}
   .metric{width:calc(50% - 10px)}
   @media(min-width:480px){.metric{width:calc(33.33% - 10px)}}
@@ -70,6 +77,33 @@
   .action-btn:disabled{opacity:.3;cursor:default}
   .action-btn:disabled:hover{background:transparent;color:#666}
   .empty{text-align:center;padding:2.5rem 1rem;color:#aaa;font-size:14px}
+
+  /* ── Calendário ── */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-nav-title{font-size:15px;font-weight:500;color:#1a1a1a}
+  .cal-nav-btn{background:#fff;border:0.5px solid #ddd;border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer;color:#444;transition:all .15s}
+  .cal-nav-btn:hover{background:#f0f0f0}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-dow{font-size:10px;color:#aaa;text-align:center;padding:4px 0;font-weight:500}
+  .cal-day{background:#fff;border:0.5px solid #e5e5e0;border-radius:8px;min-height:64px;padding:5px;cursor:default;transition:border-color .15s;position:relative}
+  .cal-day.other-month{background:#f9f9f8;border-color:#f0f0ee}
+  .cal-day.today{border-color:#378ADD;border-width:1px}
+  .cal-day.has-items{cursor:pointer}
+  .cal-day.has-items:hover{border-color:#aaa}
+  .cal-day-num{font-size:11px;color:#888;margin-bottom:3px;font-weight:500}
+  .cal-day.today .cal-day-num{color:#1F3864;font-weight:700}
+  .cal-day.other-month .cal-day-num{color:#ccc}
+  .cal-dot-list{display:flex;flex-direction:column;gap:2px}
+  .cal-dot{font-size:9px;padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+
+  /* Painel lateral do dia clicado */
+  .cal-detail{background:#fff;border:0.5px solid #e5e5e0;border-radius:12px;padding:14px 16px;margin-top:12px}
+  .cal-detail-title{font-size:13px;font-weight:500;color:#1a1a1a;margin-bottom:10px}
+  .cal-detail-item{border-bottom:0.5px solid #f0f0f0;padding:8px 0;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .cal-detail-item:last-child{border-bottom:none}
+  .cal-detail-nome{color:#1a1a1a;font-weight:500}
+  .cal-detail-cliente{color:#888;font-size:11px;margin-top:1px}
+
   .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;overflow-y:auto;padding:20px}
   .overlay.open{display:flex;align-items:flex-start;justify-content:center}
   .modal{background:#fff;border-radius:14px;width:100%;max-width:460px;padding:20px;margin:auto}
@@ -112,17 +146,38 @@
 
 <div class="content">
   <div class="metrics" id="metrics"></div>
-  <div class="filters">
-    <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
-    <button class="filter-btn" onclick="setFilter('nao orcado',this)">Não orçado</button>
-    <button class="filter-btn" onclick="setFilter('orcamento enviado',this)">Orçamento enviado</button>
-    <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
-    <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
-    <button class="filter-btn" onclick="setFilter('aguardando assinatura',this)">Ag. assinatura</button>
-    <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
-    <button class="filter-btn" onclick="setFilter('faturado',this)">Faturado</button>
+
+  <!-- Abas -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-lista" onclick="setTab('lista')">📋 Lista</button>
+    <button class="tab-btn" id="tab-calendario" onclick="setTab('calendario')">📅 Calendário</button>
   </div>
-  <div class="cards" id="cards"><div class="empty">Carregando...</div></div>
+
+  <!-- Vista Lista -->
+  <div id="view-lista">
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('nao orcado',this)">Não orçado</button>
+      <button class="filter-btn" onclick="setFilter('orcamento enviado',this)">Orçamento enviado</button>
+      <button class="filter-btn" onclick="setFilter('pendente',this)">Pendente</button>
+      <button class="filter-btn" onclick="setFilter('em andamento',this)">Em andamento</button>
+      <button class="filter-btn" onclick="setFilter('aguardando assinatura',this)">Ag. assinatura</button>
+      <button class="filter-btn" onclick="setFilter('concluido',this)">Concluído</button>
+      <button class="filter-btn" onclick="setFilter('faturado',this)">Faturado</button>
+    </div>
+    <div class="cards" id="cards"><div class="empty">Carregando...</div></div>
+  </div>
+
+  <!-- Vista Calendário -->
+  <div id="view-calendario" style="display:none">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calMes(-1)">&#8592;</button>
+      <span class="cal-nav-title" id="cal-titulo"></span>
+      <button class="cal-nav-btn" onclick="calMes(+1)">&#8594;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div id="cal-detail-wrap"></div>
+  </div>
 </div>
 
 <button class="fab" onclick="openModal()">+</button>
@@ -221,6 +276,10 @@ let filtro      = 'todos';
 let editId      = null;
 let ocultarVal  = false;
 let processando = false;
+let abaAtiva    = 'lista';
+let calAno      = new Date().getFullYear();
+let calMesAtual = new Date().getMonth();
+let calDiaSel   = null;
 
 // ── Sync dot ──────────────────────────────────────────────────────────────────
 function setSyncDot(state){
@@ -268,6 +327,11 @@ function vClass(){ return ocultarVal ? 'valor-oculto' : ''; }
 function diasRestantes(d){ if(!d) return null; return Math.ceil((new Date(d)-new Date())/(1000*60*60*24)); }
 function fmtData(d){ if(!d) return null; const [y,m,dia]=d.split('-'); return `${dia}/${m}/${y}`; }
 function fmtValor(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toDateKey(ts){
+  if(!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function statusBadge(s){
   const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',['aguardando assinatura']:'badge-aguardando',concluido:'badge-done',faturado:'badge-faturado'};
@@ -278,6 +342,20 @@ function prioBadge(p){
   const map={alta:'badge-p1',media:'badge-p2',baixa:'badge-p3'};
   const label={alta:'Alta',media:'Média',baixa:'Baixa'};
   return `<span class="badge ${map[p]}">${label[p]}</span>`;
+}
+function statusDotClass(s){
+  const map={['nao orcado']:'badge-nao-orcado',pendente:'badge-pending',['orcamento enviado']:'badge-orcamento',['em andamento']:'badge-progress',['aguardando assinatura']:'badge-aguardando',concluido:'badge-done',faturado:'badge-faturado'};
+  return map[s]||'';
+}
+
+// ── Abas ──────────────────────────────────────────────────────────────────────
+function setTab(tab){
+  abaAtiva = tab;
+  document.getElementById('tab-lista').classList.toggle('active', tab==='lista');
+  document.getElementById('tab-calendario').classList.toggle('active', tab==='calendario');
+  document.getElementById('view-lista').style.display = tab==='lista' ? '' : 'none';
+  document.getElementById('view-calendario').style.display = tab==='calendario' ? '' : 'none';
+  if(tab==='calendario') renderCalendario();
 }
 
 // ── Métricas ──────────────────────────────────────────────────────────────────
@@ -293,8 +371,6 @@ function renderMetrics(){
     .filter(s=>s.status==='orcamento enviado')
     .reduce((a,s)=>a+Number(s.valor||0),0);
 
-  // A Receber = pendente + em andamento + aguardando assinatura + concluido
-  // Se 50% já foi adiantado (está no Faturado), conta apenas os 50% restantes
   const STATUS_A_RECEBER = ['pendente','em andamento','aguardando assinatura','concluido'];
   const aReceber = servicos
     .filter(s=>STATUS_A_RECEBER.includes(s.status))
@@ -303,8 +379,6 @@ function renderMetrics(){
       return a + (s.adiantamentoPago ? valor * 0.5 : valor);
     }, 0);
 
-  // Faturado = 100% dos status "faturado"
-  //          + 50% dos que têm adiantamento pago em outros status
   const valorFaturado = servicos.reduce((a,s)=>{
     if(s.status==='faturado') return a + Number(s.valor||0);
     if(s.adiantamentoPago)    return a + Number(s.valor||0) * 0.5;
@@ -390,7 +464,134 @@ function renderCards(){
   }).join('');
 }
 
-function render(){ renderMetrics(); renderCards(); }
+// ── Calendário ────────────────────────────────────────────────────────────────
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DOWS  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function calMes(delta){
+  calMesAtual += delta;
+  if(calMesAtual > 11){ calMesAtual = 0; calAno++; }
+  if(calMesAtual < 0) { calMesAtual = 11; calAno--; }
+  calDiaSel = null;
+  renderCalendario();
+}
+
+function renderCalendario(){
+  document.getElementById('cal-titulo').textContent = `${MESES[calMesAtual]} ${calAno}`;
+
+  // Monta mapa data → serviços
+  const mapa = {};
+  servicos.forEach(s=>{
+    const k = toDateKey(s.criadoEm);
+    if(!k) return;
+    if(!mapa[k]) mapa[k] = [];
+    mapa[k].push(s);
+  });
+
+  const hoje = new Date();
+  const hojeKey = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+
+  // Primeiro dia do mês e número de dias
+  const primeiroDia = new Date(calAno, calMesAtual, 1).getDay();
+  const diasNoMes   = new Date(calAno, calMesAtual+1, 0).getDate();
+  const diasMesAnt  = new Date(calAno, calMesAtual, 0).getDate();
+
+  let html = DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  // Dias do mês anterior
+  for(let i = primeiroDia - 1; i >= 0; i--){
+    const dia = diasMesAnt - i;
+    const m   = calMesAtual === 0 ? 12 : calMesAtual;
+    const a   = calMesAtual === 0 ? calAno - 1 : calAno;
+    const k   = `${a}-${String(m).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    html += renderDia(dia, k, mapa[k]||[], true, hojeKey);
+  }
+
+  // Dias do mês atual
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    const k = `${calAno}-${String(calMesAtual+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    html += renderDia(dia, k, mapa[k]||[], false, hojeKey);
+  }
+
+  // Completar última semana
+  const total = primeiroDia + diasNoMes;
+  const resto = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for(let dia = 1; dia <= resto; dia++){
+    const m = calMesAtual === 11 ? 1 : calMesAtual + 2;
+    const a = calMesAtual === 11 ? calAno + 1 : calAno;
+    const k = `${a}-${String(m).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    html += renderDia(dia, k, mapa[k]||[], true, hojeKey);
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+  renderCalDetail();
+}
+
+function renderDia(dia, key, items, otherMonth, hojeKey){
+  const classes = ['cal-day'];
+  if(otherMonth)     classes.push('other-month');
+  if(key===hojeKey)  classes.push('today');
+  if(items.length)   classes.push('has-items');
+  if(key===calDiaSel) classes.push('today'); // reusa borda azul para selecionado
+
+  const dots = items.slice(0,3).map(s=>
+    `<div class="cal-dot ${statusDotClass(s.status)}">${s.nome}</div>`
+  ).join('');
+  const mais = items.length > 3 ? `<div class="cal-dot" style="color:#aaa">+${items.length-3} mais</div>` : '';
+
+  const onclick = items.length ? `onclick="calSelDia('${key}')"` : '';
+  return `<div class="${classes.join(' ')}" ${onclick}>
+    <div class="cal-day-num">${dia}</div>
+    <div class="cal-dot-list">${dots}${mais}</div>
+  </div>`;
+}
+
+function calSelDia(key){
+  calDiaSel = calDiaSel === key ? null : key;
+  renderCalendario();
+}
+
+function renderCalDetail(){
+  const wrap = document.getElementById('cal-detail-wrap');
+  if(!calDiaSel){ wrap.innerHTML=''; return; }
+
+  const mapa = {};
+  servicos.forEach(s=>{
+    const k = toDateKey(s.criadoEm);
+    if(!k) return;
+    if(!mapa[k]) mapa[k] = [];
+    mapa[k].push(s);
+  });
+
+  const itens = mapa[calDiaSel]||[];
+  if(!itens.length){ wrap.innerHTML=''; return; }
+
+  const [a,m,d] = calDiaSel.split('-');
+  const titulo = `${d}/${m}/${a} — ${itens.length} serviço${itens.length>1?'s':''}`;
+
+  const linhas = itens.map(s=>`
+    <div class="cal-detail-item">
+      <div>
+        <div class="cal-detail-nome">${s.nome}</div>
+        <div class="cal-detail-cliente">${s.cliente}</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+        ${prioBadge(s.prioridade)} ${statusBadge(s.status)}
+      </div>
+    </div>`).join('');
+
+  wrap.innerHTML = `
+    <div class="cal-detail">
+      <div class="cal-detail-title">${titulo}</div>
+      ${linhas}
+    </div>`;
+}
+
+function render(){
+  renderMetrics();
+  renderCards();
+  if(abaAtiva==='calendario') renderCalendario();
+}
 
 function setFilter(f,btn){
   filtro=f;
